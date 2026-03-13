@@ -33,9 +33,10 @@ Em vez de deixar senhas expostas, o projeto utiliza uma string de conexão. Voc�
 Variáveis de Conexão
 No arquivo main.py, localize a variável DATABASE_URL e substitua pelos seus dados:
 
-Python
+```Python
 # Estrutura: postgresql://USUARIO:SENHA@HOST:PORTA/NOME_DO_BANCO
 DATABASE_URL = "postgresql://postgres:suasenha@localhost:5432/gestao_frota"
+```
 Nota: O script está configurado com Base.metadata.create_all(engine), o que significa que as tabelas serão criadas automaticamente na primeira execução caso ainda não existam no seu banco de dados.
 
 💻 Comandos de Execução
@@ -49,7 +50,7 @@ python main.py
 Ao executar o script, você verá uma saída similar a esta no seu terminal, demonstrando as fases do projeto:
 
 1. Operações CRUD (Create, Read, Update, Delete)
-Plaintext
+```Plaintext
 --- Iniciando Operações CRUD ---
 CREATE: 3 Motoristas inseridos.
 READ: Motoristas cadastrados (Ordenados por nome):
@@ -58,7 +59,7 @@ READ: Motoristas cadastrados (Ordenados por nome):
  - Roberto Souza (CNH: B)
 UPDATE: Experiência de Carlos Alberto atualizada.
 DELETE: Registro removido com sucesso.
-
+```
 2. Consultas Avançadas (Relacionamentos e Joins)
 Plaintext
 --- Iniciando Consultas Avançadas ---
