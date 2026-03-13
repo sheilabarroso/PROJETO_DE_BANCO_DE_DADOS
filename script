@@ -1,0 +1,128 @@
+-- ==========================================================
+-- SISTEMA DE GESTÃO DE FROTA - SCRIPT COMPLETO
+-- ==========================================================
+
+-- 1. LIMPEZA DO AMBIENTE
+DROP VIEW IF EXISTS vw_resumo_viagens;
+DROP MATERIALIZED VIEW IF EXISTS mv_custo_total_veiculo;
+DROP TABLE IF EXISTS "VIAGEM" CASCADE;
+DROP TABLE IF EXISTS "ABASTECIMENTO" CASCADE;
+DROP TABLE IF EXISTS "MANUTENÇÃO" CASCADE;
+DROP TABLE IF EXISTS "MOTORISTA" CASCADE;
+DROP TABLE IF EXISTS "VEÍCULO" CASCADE;
+
+-- 2. CRIAÇÃO DAS TABELAS (DDL)
+CREATE TABLE "VEÍCULO" (
+    pk_id_veicular SERIAL PRIMARY KEY,
+    placa VARCHAR(10) UNIQUE NOT NULL,
+    marca VARCHAR(50) NOT NULL,
+    modelo VARCHAR(50) NOT NULL,
+    tipo_veicular VARCHAR(20) NOT NULL CHECK (tipo_veicular IN ('Carro', 'Moto', 'Caminhão')),
+    ano INTEGER NOT NULL,
+    quilometragem NUMERIC(12, 2) DEFAULT 0 CHECK (quilometragem >= 0),
+    status VARCHAR(20) DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'MANUTENCAO', 'INATIVO')),
+    consumo_medio NUMERIC(5, 2)
+);
+
+CREATE TABLE "MOTORISTA" (
+    pk_id_motorista SERIAL PRIMARY KEY,
+    cpf VARCHAR(14) UNIQUE NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    categoria_cnh VARCHAR(2) NOT NULL CHECK (categoria_cnh IN ('A', 'B', 'C', 'D', 'E')),
+    tempo_experiencia INTEGER DEFAULT 0,
+    disponivel BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE "MANUTENÇÃO" (
+    pk_id_manutencao SERIAL PRIMARY KEY,
+    fk_id_veicular INTEGER NOT NULL REFERENCES "VEÍCULO"(pk_id_veicular) ON DELETE CASCADE,
+    data_manutencao DATE NOT NULL,
+    tipo_manutencao VARCHAR(20) NOT NULL CHECK (tipo_manutencao IN ('Preventiva', 'Corretiva')),
+    custo NUMERIC(10, 2) NOT NULL,
+    descricao TEXT
+);
+
+CREATE TABLE "ABASTECIMENTO" (
+    pk_id_abastecimento SERIAL PRIMARY KEY,
+    fk_id_veicular INTEGER NOT NULL REFERENCES "VEÍCULO"(pk_id_veicular) ON DELETE CASCADE,
+    data_abastecimento DATE NOT NULL,
+    tipo_combustivel VARCHAR(30) NOT NULL,
+    litros NUMERIC(10, 2) NOT NULL,
+    valor_pago NUMERIC(10, 2) NOT NULL
+);
+
+CREATE TABLE "VIAGEM" (
+    pk_id_viagem SERIAL PRIMARY KEY,
+    fk_id_veicular INTEGER NOT NULL REFERENCES "VEÍCULO"(pk_id_veicular),
+    fk_id_motorista INTEGER NOT NULL REFERENCES "MOTORISTA"(pk_id_motorista),
+    data_viagem DATE NOT NULL,
+    origem VARCHAR(100) NOT NULL,
+    destino VARCHAR(100) NOT NULL,
+    distancia_percorrida NUMERIC(10, 2) NOT NULL
+);
+
+-- 3. MECANISMOS AVANÇADOS (VIEWS, TRIGGERS, PROCEDURES)
+
+-- View Operacional: Resumo de Viagens [cite: 2]
+CREATE VIEW vw_resumo_viagens AS
+SELECT 
+    V.pk_id_viagem AS id, V.data_viagem, M.nome AS motorista,
+    VE.modelo AS veiculo, VE.placa, V.origem, V.destino
+FROM "VIAGEM" V
+JOIN "MOTORISTA" M ON V.fk_id_motorista = M.pk_id_motorista
+JOIN "VEÍCULO" VE ON V.fk_id_veicular = VE.pk_id_veicular;
+
+-- View Materializada: Custo Total por Veículo 
+CREATE MATERIALIZED VIEW mv_custo_total_veiculo AS
+SELECT 
+    VE.pk_id_veicular, VE.placa,
+    COALESCE(SUM(M.custo), 0) AS total_manutencao,
+    COALESCE(SUM(A.valor_pago), 0) AS total_abastecimento,
+    (COALESCE(SUM(M.custo), 0) + COALESCE(SUM(A.valor_pago), 0)) AS custo_global
+FROM "VEÍCULO" VE
+LEFT JOIN "MANUTENÇÃO" M ON VE.pk_id_veicular = M.fk_id_veicular
+LEFT JOIN "ABASTECIMENTO" A ON VE.pk_id_veicular = A.fk_id_veicular
+GROUP BY VE.pk_id_veicular, VE.placa WITH DATA;
+
+-- Trigger BEFORE: Validar Veículo Ativo antes da viagem [cite: 7, 8]
+CREATE OR REPLACE FUNCTION fn_validar_veiculo_ativo() RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT status FROM "VEÍCULO" WHERE pk_id_veicular = NEW.fk_id_veicular) = 'INATIVO' THEN
+        RAISE EXCEPTION 'Não é permitido registrar viagem para um veículo INATIVO.';
+    END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_veiculo_antes_viagem
+BEFORE INSERT ON "VIAGEM" FOR EACH ROW EXECUTE FUNCTION fn_validar_veiculo_ativo();
+
+-- Trigger AFTER: Atualizar Status para Manutenção [cite: 9, 10]
+CREATE OR REPLACE FUNCTION fn_atualizar_status_manutencao() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE "VEÍCULO" SET status = 'MANUTENCAO' WHERE pk_id_veicular = NEW.fk_id_veicular;
+    RETURN NULL;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_status_apos_manutencao
+AFTER INSERT ON "MANUTENÇÃO" FOR EACH ROW EXECUTE FUNCTION fn_atualizar_status_manutencao();
+
+-- Stored Procedure: Finalizar Manutenção 
+CREATE OR REPLACE PROCEDURE pr_finalizar_manutencao(p_id_veiculo INTEGER, p_nova_km NUMERIC)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE "VEÍCULO" SET status = 'ATIVO', quilometragem = p_nova_km WHERE pk_id_veicular = p_id_veiculo;
+    RAISE NOTICE 'Veículo % liberado. Nova KM: %', p_id_veiculo, p_nova_km;
+END; $$;
+
+-- 4. CARGA DE DADOS INICIAL (DML)
+INSERT INTO "VEÍCULO" (placa, marca, modelo, tipo_veicular, ano, quilometragem, status) VALUES
+('ABC-1234', 'Volvo', 'FH 540', 'Caminhão', 2021, 55000.00, 'ATIVO'),
+('XYZ-9876', 'Fiat', 'Cronos', 'Carro', 2023, 12000.00, 'ATIVO'),
+('MOTO-111', 'Honda', 'CB 500', 'Moto', 2022, 5000.00, 'ATIVO');
+
+INSERT INTO "MOTORISTA" (cpf, nome, categoria_cnh, tempo_experiencia) VALUES
+('111.111.111-11', 'Carlos Andrade', 'E', 15),
+('222.222.222-22', 'Beatriz Souza', 'B', 4);
+
+INSERT INTO "VIAGEM" (fk_id_veicular, fk_id_motorista, data_viagem, origem, destino, distancia_percorrida) VALUES
+(1, 1, '2023-11-22', 'Fortaleza-CE', 'Natal-RN', 530.00);
