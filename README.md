@@ -19,13 +19,14 @@ Bash
 python -m venv venv
 # No Windows:
 venv\Scripts\activate
-# No Linux/Mac:
-source venv/bin/activate
+
 4. Instalar Dependências
 Instale o SQLAlchemy e o driver do PostgreSQL:
 
-Bash
+```Bash
 pip install sqlalchemy psycopg2
+```
+
 ⚙️ Configuração do Banco de Dados
 Em vez de deixar senhas expostas, o projeto utiliza uma string de conexão. Você deve configurar as variáveis de ambiente ou editar a linha de conexão no código:
 
@@ -40,8 +41,10 @@ Nota: O script está configurado com Base.metadata.create_all(engine), o que sig
 💻 Comandos de Execução
 Para rodar o projeto e executar as operações de CRUD e Consultas:
 
-Bash
+```Bash
 python main.py
+```
+
 📊 Exemplos de Uso (Saída do Console)
 Ao executar o script, você verá uma saída similar a esta no seu terminal, demonstrando as fases do projeto:
 
@@ -55,6 +58,7 @@ READ: Motoristas cadastrados (Ordenados por nome):
  - Roberto Souza (CNH: B)
 UPDATE: Experiência de Carlos Alberto atualizada.
 DELETE: Registro removido com sucesso.
+
 2. Consultas Avançadas (Relacionamentos e Joins)
 Plaintext
 --- Iniciando Consultas Avançadas ---
