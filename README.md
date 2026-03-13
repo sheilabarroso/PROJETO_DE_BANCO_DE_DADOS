@@ -3,6 +3,7 @@ Este projeto implementa uma camada de ORM (Object-Relational Mapping) em Python 
 
 # 🚀 Como Executar (Passo a Passo)
 1. Pré-requisitos
+
 Python 3.8+ instalado.
 
 PostgreSQL instalado e em execução.
@@ -15,11 +16,11 @@ Crie uma pasta para o projeto e salve o arquivo principal (ex: main.py).
 3. Criar Ambiente Virtual (Recomendado)
 No terminal, dentro da pasta do projeto:
 
-Bash
+```Bash
 python -m venv venv
 # No Windows:
 venv\Scripts\activate
-
+```
 4. Instalar Dependências
 Instale o SQLAlchemy e o driver do PostgreSQL:
 
@@ -61,7 +62,7 @@ UPDATE: Experiência de Carlos Alberto atualizada.
 DELETE: Registro removido com sucesso.
 ```
 2. Consultas Avançadas (Relacionamentos e Joins)
-Plaintext
+```Plaintext
 --- Iniciando Consultas Avançadas ---
 
 1. Viagens e Motoristas (Relacionamento Join):
@@ -74,6 +75,7 @@ Veículo: XYZ-9876 | Gasto Total: R$ 450.00
 3. Top 5 Veículos com mais KM (Filtro + Ordenação):
 Placa: BRA2E19 | KM: 15400.50
 Placa: ABC-1234 | KM: 1200.00
+```
 🛠️ Tecnologias Utilizadas
 Linguagem: Python
 
